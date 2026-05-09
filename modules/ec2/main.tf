@@ -13,9 +13,18 @@ data "aws_ami" "amazon_linux" {
   }
 }
 
+# Read public key from Secrets Manager
+data "aws_secretsmanager_secret" "ec2_key" {
+  name = "terraform-lab/ec2-public-key"
+}
+
+data "aws_secretsmanager_secret_version" "ec2_key" {
+  secret_id = data.aws_secretsmanager_secret.ec2_key.id
+}
+
 resource "aws_key_pair" "lab" {
   key_name   = "${var.project_name}-key"
-  public_key = file("~/.ssh/terraform-lab-key.pub")
+  public_key = data.aws_secretsmanager_secret_version.ec2_key.secret_string
 }
 
 resource "aws_instance" "lab" {
