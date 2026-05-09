@@ -1,3 +1,7 @@
+# Bootstrap — runs once to set up foundation
+# Creates: OIDC provider, GitLab CI role, multi-account providers
+# Run with: make bootstrap-oidc
+
 terraform {
   required_providers {
     aws = {

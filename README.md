@@ -1,4 +1,4 @@
-markdown# Terraform Lab — Multi-Account AWS Infrastructure
+# Terraform Lab — Multi-Account AWS Infrastructure
 
 ## Overview
 Production-style AWS infrastructure using Terraform with:
@@ -70,13 +70,51 @@ Creates in management account:
 - IAM role `gitlab-ci-terraform` with AdminAccess
 - Outputs the role ARN (used in .gitlab-ci.yml)
 
-### Step 3 — Store SSH public key in Secrets Manager
+### Step 3 — Store SSH public key in Secrets Manager (all 3 accounts)
 ```bash
+# management account
 aws secretsmanager create-secret \
   --name "terraform-lab/ec2-public-key" \
   --secret-string "$(cat ~/.ssh/terraform-lab-key.pub)" \
   --region us-east-1
+
+# dev account
+aws secretsmanager create-secret \
+  --name "terraform-lab/ec2-public-key" \
+  --secret-string "$(cat ~/.ssh/terraform-lab-key.pub)" \
+  --region us-east-1 \
+  --profile dev
+
+# staging account
+aws secretsmanager create-secret \
+  --name "terraform-lab/ec2-public-key" \
+  --secret-string "$(cat ~/.ssh/terraform-lab-key.pub)" \
+  --region us-east-1 \
+  --profile staging
 ```
+
+**2 — Fix the markdown code block** — first line says `markdown#` instead of `#`. Remove `markdown` from the very first line.
+
+---
+
+Fix those two things, save, then commit everything:
+
+```bash
+git add .
+git commit -m "Add bootstrap secrets policies + update README"
+git push
+```
+
+Paste the pipeline output from GitLab.
+
+## Bootstrap Files
+| File | Purpose |
+|------|---------|
+| `bootstrap/main.tf` | OIDC provider + GitLab CI IAM role |
+| `bootstrap/s3_policies.tf` | Cross-account S3 state access |
+| `bootstrap/secrets_policies.tf` | Cross-account Secrets Manager access |
+| `bootstrap/variables.tf` | Account IDs + GitLab project path |
+| `bootstrap/outputs.tf` | Role ARN + OIDC provider ARN |
 
 ### Step 4 — Initialize environments
 ```bash

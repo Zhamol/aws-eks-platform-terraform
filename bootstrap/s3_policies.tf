@@ -1,3 +1,7 @@
+# S3 Bucket Policies
+# Allows GitLab CI role (management account) to read/write
+# Terraform state files in dev and staging account buckets
+
 # Allow GitLab CI role to access dev state bucket
 resource "aws_s3_bucket_policy" "dev_state" {
   bucket   = "terraform-state-${var.dev_account_id}"
