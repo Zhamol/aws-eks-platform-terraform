@@ -15,11 +15,30 @@ terraform {
   }
 }
 
+# Management account provider (default)
 provider "aws" {
   region = "us-east-1"
 }
 
-# OIDC Provider — tells AWS to trust GitLab
+# Dev account provider
+provider "aws" {
+  alias  = "dev"
+  region = "us-east-1"
+  assume_role {
+    role_arn = "arn:aws:iam::446598504905:role/OrganizationAccountAccessRole"
+  }
+}
+
+# Staging account provider
+provider "aws" {
+  alias  = "staging"
+  region = "us-east-1"
+  assume_role {
+    role_arn = "arn:aws:iam::916292310732:role/OrganizationAccountAccessRole"
+  }
+}
+
+# OIDC Provider
 resource "aws_iam_openid_connect_provider" "gitlab" {
   url             = "https://gitlab.com"
   client_id_list  = ["sts.amazonaws.com"]
@@ -40,7 +59,7 @@ resource "aws_iam_role" "gitlab_ci" {
       Action = "sts:AssumeRoleWithWebIdentity"
       Condition = {
         StringLike = {
-          "gitlab.com:sub" = "project_path:Zhamol/terraform-lab:*"
+          "gitlab.com:sub" = "project_path:${var.gitlab_project_path}:*"
         }
       }
     }]
@@ -51,4 +70,4 @@ resource "aws_iam_role" "gitlab_ci" {
 resource "aws_iam_role_policy_attachment" "gitlab_ci" {
   role       = aws_iam_role.gitlab_ci.name
   policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
-}
+} 
