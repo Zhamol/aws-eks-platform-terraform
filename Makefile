@@ -40,6 +40,13 @@ bootstrap-staging:
 bootstrap-all: bootstrap-mgmt bootstrap-dev bootstrap-staging
 	@echo "All accounts bootstrapped!"
 
+# Bootstrap OIDC + GitLab CI role
+bootstrap-oidc:
+	cd bootstrap && terraform init && terraform apply
+
+destroy-oidc:
+	cd bootstrap && terraform init && terraform destroy
+
 # Destroy backends
 destroy-backend-mgmt:
 	aws s3 rb s3://$(MGMT_BUCKET) --force

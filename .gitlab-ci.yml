@@ -1,0 +1,101 @@
+image: ubuntu:22.04
+
+variables:
+  AWS_ROLE_ARN: "arn:aws:iam::940920597829:role/gitlab-ci-terraform"
+  AWS_DEFAULT_REGION: "us-east-1"
+  TERRAFORM_VERSION: "1.5.7"
+  AWS_CLI_VERSION: "2.15.0"
+
+stages:
+  - validate
+  - plan-dev
+  - apply-dev
+  - plan-staging
+  - apply-staging
+
+# Combined template — OIDC + install
+.base: &base
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: sts.amazonaws.com
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq curl unzip
+    - curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-${AWS_CLI_VERSION}.zip" -o awscliv2.zip
+    - unzip -q awscliv2.zip && ./aws/install
+    - aws --version
+    - curl -s "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip" -o terraform.zip
+    - unzip -q terraform.zip && mv terraform /usr/local/bin/
+    - terraform --version
+    - >
+      export $(printf "AWS_ACCESS_KEY_ID=%s AWS_SECRET_ACCESS_KEY=%s AWS_SESSION_TOKEN=%s"
+      $(aws sts assume-role-with-web-identity
+      --role-arn ${AWS_ROLE_ARN}
+      --role-session-name "gitlab-ci-${CI_JOB_ID}"
+      --web-identity-token "${GITLAB_OIDC_TOKEN}"
+      --duration-seconds 3600
+      --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]'
+      --output text))
+
+# Validate — runs on any push
+validate:
+  stage: validate
+  <<: *base
+  script:
+    - cd environments/dev
+    - terraform init -backend=false
+    - terraform validate
+    - cd ${CI_PROJECT_DIR}/environments/staging
+    - terraform init -backend=false
+    - terraform validate
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+
+# Plan dev — main branch + merge requests
+plan-dev:
+  stage: plan-dev
+  <<: *base
+  script:
+    - cd environments/dev
+    - terraform init
+    - terraform plan
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_MERGE_REQUEST_ID
+
+# Apply dev — automatic on main
+apply-dev:
+  stage: apply-dev
+  <<: *base
+  script:
+    - cd environments/dev
+    - terraform init
+    - terraform apply -auto-approve
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: on_success
+  needs: ["plan-dev"]
+
+# Plan staging
+plan-staging:
+  stage: plan-staging
+  <<: *base
+  script:
+    - cd environments/staging
+    - terraform init
+    - terraform plan
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+  needs: ["apply-dev"]
+
+# Apply staging — manual approval
+apply-staging:
+  stage: apply-staging
+  <<: *base
+  script:
+    - cd environments/staging
+    - terraform init
+    - terraform apply -auto-approve
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: manual
+  needs: ["plan-staging"]
