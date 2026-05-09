@@ -8,8 +8,11 @@ terraform {
 }
 
 provider "aws" {
-  region  = var.aws_region
-  profile = "dev"
+  region = var.aws_region
+
+  assume_role {
+    role_arn = "arn:aws:iam::446598504905:role/OrganizationAccountAccessRole"
+  }
 }
 
 module "vpc" {
