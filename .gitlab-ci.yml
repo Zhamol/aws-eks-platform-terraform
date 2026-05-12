@@ -71,8 +71,8 @@ test:
   script:
     # install and run tflint
     - curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
-    - tflint --init
-    - tflint --recursive
+    - tflint --init --config .tflint.hcl
+    - tflint --recursive --config .tflint.hcl
 
     # install and run checkov
     - pip3 install checkov
