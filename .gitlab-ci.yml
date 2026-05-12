@@ -71,15 +71,15 @@ test:
   script:
     # install tflint
     - curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
-    - tflint --init
-    
-    # run tflint only on terraform directories
-    - tflint --chdir=environments/dev
-    - tflint --chdir=environments/staging
-    - tflint --chdir=modules/vpc
-    - tflint --chdir=modules/ec2
-    - tflint --chdir=modules/s3
-    - tflint --chdir=bootstrap
+    - tflint --init --config $(pwd)/.tflint.hcl
+
+    # run tflint on terraform directories
+    - tflint --chdir=environments/dev --config $(pwd)/.tflint.hcl
+    - tflint --chdir=environments/staging --config $(pwd)/.tflint.hcl
+    - tflint --chdir=modules/vpc --config $(pwd)/.tflint.hcl
+    - tflint --chdir=modules/ec2 --config $(pwd)/.tflint.hcl
+    - tflint --chdir=modules/s3 --config $(pwd)/.tflint.hcl
+    - tflint --chdir=bootstrap --config $(pwd)/.tflint.hcl
 
     # install and run checkov
     - pip3 install checkov
