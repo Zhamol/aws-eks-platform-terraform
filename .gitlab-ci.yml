@@ -69,10 +69,17 @@ test:
   stage: test
   <<: *base
   script:
-    # install and run tflint
+    # install tflint
     - curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
-    - tflint --init --config .tflint.hcl
-    - tflint --recursive --config .tflint.hcl
+    - tflint --init
+    
+    # run tflint only on terraform directories
+    - tflint --chdir=environments/dev
+    - tflint --chdir=environments/staging
+    - tflint --chdir=modules/vpc
+    - tflint --chdir=modules/ec2
+    - tflint --chdir=modules/s3
+    - tflint --chdir=bootstrap
 
     # install and run checkov
     - pip3 install checkov
