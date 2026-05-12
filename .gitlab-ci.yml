@@ -82,9 +82,12 @@ test:
     - tflint --chdir=bootstrap --config $(pwd)/.tflint.hcl
 
     # install and run checkov
+   # install and run checkov
     - apt-get install -y -qq python3-pip
     - pip3 install checkov
-    - checkov -d . --quiet
+    - checkov -d environments/ --quiet
+    - checkov -d modules/ --quiet
+    - checkov -d bootstrap/ --quiet
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
 
