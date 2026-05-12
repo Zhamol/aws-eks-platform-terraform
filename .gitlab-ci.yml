@@ -8,94 +8,218 @@ variables:
 
 stages:
   - validate
+  - test
   - plan-dev
   - apply-dev
+  - notify-dev
   - plan-staging
   - apply-staging
+  - notify-final
+  
 
-# Combined template — OIDC + install
+# Combined template — OIDC + install    
+# step 1 — request OIDC token from GitLab
+
 .base: &base
-  id_tokens:
-    GITLAB_OIDC_TOKEN:
-      aud: sts.amazonaws.com
-  before_script:
-    - apt-get update -qq && apt-get install -y -qq curl unzip
-    - curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-${AWS_CLI_VERSION}.zip" -o awscliv2.zip
-    - unzip -q awscliv2.zip && ./aws/install
-    - aws --version
-    - curl -s "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip" -o terraform.zip
-    - unzip -q terraform.zip && mv terraform /usr/local/bin/
-    - terraform --version
-    - >
-      export $(printf "AWS_ACCESS_KEY_ID=%s AWS_SECRET_ACCESS_KEY=%s AWS_SESSION_TOKEN=%s"
-      $(aws sts assume-role-with-web-identity
-      --role-arn ${AWS_ROLE_ARN}
-      --role-session-name "gitlab-ci-${CI_JOB_ID}"
-      --web-identity-token "${GITLAB_OIDC_TOKEN}"
-      --duration-seconds 3600
-      --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]'
-      --output text))
+   id_tokens:
+      GITLAB_OIDC_TOKEN:
+        aud: sts.amazonaws.com
+   before_script:
 
-# Validate — runs on any push
+     # step 2 — install AWS CLI
+     - apt-get update -qq && apt-get install -y -qq curl unzip
+     - curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-${AWS_CLI_VERSION}.zip" -o awscliv2.zip
+     - unzip -q awscliv2.zip && ./aws/install
+
+     # step 3 — install Terraform
+     - curl -s "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip" -o terraform.zip
+     - unzip -q terraform.zip && mv terraform /usr/local/bin/ 
+
+     # step 4 — authenticate with AWS
+     - > 
+       export $(printf "AWS_ACCESS_KEY_ID=%s AWS_SECRET_ACCESS_KEY=%s AWS_SESSION_TOKEN=%s"
+       $(aws sts assume-role-with-web-identity
+       --role-arn ${AWS_ROLE_ARN}
+       --role-session-name "gitlab-ci-${CI_JOB_ID}"
+       --web-identity-token "${GITLAB_OIDC_TOKEN}"
+       --duration-seconds 3600
+       --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]'
+       --output text))
+
 validate:
   stage: validate
   <<: *base
   script:
+    # check formatting
+    - terraform fmt --check -recursive
+    
+    # check syntax for dev
     - cd environments/dev
     - terraform init -backend=false
     - terraform validate
+    
+    # check syntax for staging
     - cd ${CI_PROJECT_DIR}/environments/staging
     - terraform init -backend=false
     - terraform validate
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
 
-# Plan dev — main branch + merge requests
+test:
+  stage: test
+  <<: *base
+  script:
+    # install and run tflint
+    - curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+    - tflint --init
+    - tflint --recursive
+
+    # install and run checkov
+    - pip3 install checkov
+    - checkov -d . --quiet
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+
 plan-dev:
   stage: plan-dev
   <<: *base
   script:
     - cd environments/dev
     - terraform init
-    - terraform plan
+    - terraform plan -out=tfplan
+  artifacts:
+    paths:
+      - environments/dev/tfplan
+    expire_in: 1 hour
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - environments/dev/**/*
+        - modules/**/*
+        - .gitlab-ci.yml
     - if: $CI_MERGE_REQUEST_ID
-
-# Apply dev — automatic on main
+      changes:
+        - environments/dev/**/*
+        - modules/**/*
+   
 apply-dev:
   stage: apply-dev
   <<: *base
   script:
     - cd environments/dev
     - terraform init
-    - terraform apply -auto-approve
+    - terraform apply tfplan
+
+  needs: ["plan-dev"]
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
+      changes: 
+        - environments/dev/**/*
+        - modules/**/*
+        - .gitlab-ci.yml
       when: on_success
-  needs: ["plan-dev"]
 
-# Plan staging
+
+notify-dev:
+  stage: notify-dev
+  image: curlimages/curl:latest
+  before_script: []
+  script:
+    - |
+      if [ "$CI_JOB_STATUS" == "failed" ]; then
+        STATUS="❌ Dev deployment failed"
+        COLOR="danger"
+      else
+        STATUS="✅ Dev deployed successfully"
+        COLOR="good"
+      fi
+      curl -s -X POST $SLACK_WEBHOOK_URL \
+        -H 'Content-type: application/json' \
+        -d "{
+          \"text\": \"${STATUS}\",
+          \"attachments\": [{
+            \"color\": \"${COLOR}\",
+            \"fields\": [
+              {\"title\": \"Project\", \"value\": \"${CI_PROJECT_NAME}\", \"short\": true},
+              {\"title\": \"By\", \"value\": \"${GITLAB_USER_NAME}\", \"short\": true},
+              {\"title\": \"Commit\", \"value\": \"${CI_COMMIT_SHORT_SHA}\", \"short\": true},
+              {\"title\": \"Message\", \"value\": \"${CI_COMMIT_MESSAGE}\", \"short\": false},
+              {\"title\": \"Approve staging\", \"value\": \"${CI_PIPELINE_URL}\", \"short\": false}
+            ]
+          }]
+        }"
+  needs: ["apply-dev"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: always
+
+
 plan-staging:
   stage: plan-staging
   <<: *base
+  needs: ["notify-dev"] 
   script:
     - cd environments/staging
     - terraform init
-    - terraform plan
+    - terraform plan -out=tfplan
+  artifacts:
+    paths:
+      - environments/staging/tfplan
+    expire_in: 1 hour
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
-  needs: ["apply-dev"]
+      changes:
+        - environments/staging/**/*
+        - modules/**/*
+        - .gitlab-ci.yml
 
-# Apply staging — manual approval
+
 apply-staging:
   stage: apply-staging
   <<: *base
   script:
     - cd environments/staging
     - terraform init
-    - terraform apply -auto-approve
+    - terraform apply tfplan
+
+  needs: ["plan-staging"]
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
+      changes: 
+        - environments/staging/**/*
+        - modules/**/*
+        - .gitlab-ci.yml
       when: manual
-  needs: ["plan-staging"]
+    
+notify-final:
+  stage: notify-final
+  image: curlimages/curl:latest
+  before_script: []
+  script:
+    - |
+      if [ "$CI_JOB_STATUS" == "failed" ]; then
+         STATUS="❌ Pipeline failed"
+         COLOR="danger"
+      else
+        STATUS="✅ Pipeline succeeded"
+        COLOR="good"
+      fi
+      curl -s -X POST $SLACK_WEBHOOK_URL \
+        -H 'Content-type: application/json' \
+        -d "{
+          \"text\": \"${STATUS}\",
+          \"attachments\": [{
+            \"color\": \"${COLOR}\",
+            \"fields\": [
+              {\"title\": \"Project\", \"value\": \"${CI_PROJECT_NAME}\", \"short\": true},
+              {\"title\": \"By\", \"value\": \"${GITLAB_USER_NAME}\", \"short\": true},
+              {\"title\": \"Commit\", \"value\": \"${CI_COMMIT_SHORT_SHA}\", \"short\": true},
+              {\"title\": \"Message\", \"value\": \"${CI_COMMIT_MESSAGE}\", \"short\": false},
+              {\"title\": \"Approve staging\", \"value\": \"${CI_PIPELINE_URL}\", \"short\": false}
+            ]
+          }]
+        }"
+  needs: ["apply-staging"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: always
