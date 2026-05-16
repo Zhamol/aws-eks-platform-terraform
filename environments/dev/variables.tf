@@ -21,3 +21,15 @@ variable "project_name" {
   type        = string
   default     = "terraform-lab"
 }
+
+variable "account_id" {
+  description = "AWS account ID for the dev environment"
+  type        = string
+  default     = "446598504905"
+}
+
+variable "terraform_role_name" {
+  description = "IAM role name to assume in this account for Terraform execution"
+  type        = string
+  default     = "OrganizationAccountAccessRole"
+}

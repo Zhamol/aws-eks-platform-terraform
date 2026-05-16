@@ -46,7 +46,7 @@ provider "aws" {
 resource "aws_iam_openid_connect_provider" "gitlab" {
   url             = "https://gitlab.com"
   client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = ["9e99a48a9960b14926bb7f3b02e22da2b0ab7280"]
+  thumbprint_list = [var.oidc_thumbprint]
 }
 
 # IAM Role for GitLab CI
@@ -70,8 +70,43 @@ resource "aws_iam_role" "gitlab_ci" {
   })
 }
 
-# Give GitLab CI admin access
-resource "aws_iam_role_policy_attachment" "gitlab_ci" {
+# Scoped managed policies for GitLab CI — replaces AdministratorAccess (CKV_AWS_355)
+resource "aws_iam_role_policy_attachment" "gitlab_ci_ec2" {
   role       = aws_iam_role.gitlab_ci.name
-  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
-} 
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2FullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "gitlab_ci_vpc" {
+  role       = aws_iam_role.gitlab_ci.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonVPCFullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "gitlab_ci_s3" {
+  role       = aws_iam_role.gitlab_ci.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "gitlab_ci_iam" {
+  role       = aws_iam_role.gitlab_ci.name
+  policy_arn = "arn:aws:iam::aws:policy/IAMFullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "gitlab_ci_dynamodb" {
+  role       = aws_iam_role.gitlab_ci.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "gitlab_ci_cloudwatch" {
+  role       = aws_iam_role.gitlab_ci.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "gitlab_ci_secrets" {
+  role       = aws_iam_role.gitlab_ci.name
+  policy_arn = "arn:aws:iam::aws:policy/SecretsManagerReadWrite"
+}
+
+resource "aws_iam_role_policy_attachment" "gitlab_ci_sqs" {
+  role       = aws_iam_role.gitlab_ci.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSQSFullAccess"
+}

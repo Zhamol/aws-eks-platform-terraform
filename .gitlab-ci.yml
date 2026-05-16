@@ -1,10 +1,16 @@
 image: ubuntu:22.04
 
 variables:
+  # Set AWS_ROLE_ARN in GitLab CI project settings to avoid hardcoding account IDs
   AWS_ROLE_ARN: "arn:aws:iam::940920597829:role/gitlab-ci-terraform"
   AWS_DEFAULT_REGION: "us-east-1"
   TERRAFORM_VERSION: "1.5.7"
   AWS_CLI_VERSION: "2.15.0"
+  DEV_ACCOUNT_ID: "446598504905"
+  STAGING_ACCOUNT_ID: "916292310732"
+  DEV_STATE_BUCKET: "terraform-state-${DEV_ACCOUNT_ID}"
+  STAGING_STATE_BUCKET: "terraform-state-${STAGING_ACCOUNT_ID}"
+  STATE_LOCK_TABLE: "terraform-state-lock"
 
 stages:
   - validate
@@ -15,9 +21,9 @@ stages:
   - plan-staging
   - apply-staging
   - notify-final
-  
 
-# Combined template — OIDC + install    
+
+# Combined template — OIDC + install
 # step 1 — request OIDC token from GitLab
 
 .base: &base
@@ -26,17 +32,22 @@ stages:
         aud: sts.amazonaws.com
    before_script:
 
-     # step 2 — install AWS CLI
-     - apt-get update -qq && apt-get install -y -qq curl unzip
-     - curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-${AWS_CLI_VERSION}.zip" -o awscliv2.zip
+     # step 2 — install AWS CLI with GPG signature verification
+     - apt-get update -qq && apt-get install -y -qq curl unzip gnupg
+     - curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-${AWS_CLI_VERSION}.zip" -o awscliv2.zip
+     - curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-${AWS_CLI_VERSION}.zip.sig" -o awscliv2.zip.sig
+     - gpg --keyserver hkps://keys.openpgp.org --recv-keys FB5DB77FD5C118B80511ADA8A6310ACC4672475C
+     - gpg --verify awscliv2.zip.sig awscliv2.zip
      - unzip -q awscliv2.zip && ./aws/install
 
-     # step 3 — install Terraform
-     - curl -s "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip" -o terraform.zip
-     - unzip -q terraform.zip && mv terraform /usr/local/bin/ 
+     # step 3 — install Terraform with SHA256 checksum verification
+     - curl -fsSL "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_SHA256SUMS" -o terraform_SHA256SUMS
+     - curl -fsSL "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip" -o terraform.zip
+     - grep "terraform_${TERRAFORM_VERSION}_linux_amd64.zip" terraform_SHA256SUMS | sha256sum -c -
+     - unzip -q terraform.zip && mv terraform /usr/local/bin/
 
-     # step 4 — authenticate with AWS
-     - > 
+     # step 4 — authenticate with AWS via OIDC
+     - >
        export $(printf "AWS_ACCESS_KEY_ID=%s AWS_SECRET_ACCESS_KEY=%s AWS_SESSION_TOKEN=%s"
        $(aws sts assume-role-with-web-identity
        --role-arn ${AWS_ROLE_ARN}
@@ -52,12 +63,12 @@ validate:
   script:
     # check formatting
     - terraform fmt --check -recursive
-    
+
     # check syntax for dev
     - cd environments/dev
     - terraform init -backend=false
     - terraform validate
-    
+
     # check syntax for staging
     - cd ${CI_PROJECT_DIR}/environments/staging
     - terraform init -backend=false
@@ -82,14 +93,13 @@ test:
     - tflint --chdir=bootstrap --config $(pwd)/.tflint.hcl
 
     # install and run checkov
-   # install and run checkov
     - apt-get install -y -qq python3-pip
     - pip3 install checkov
     - checkov -d environments/ --quiet
     - checkov -d modules/ --quiet
     - checkov -d bootstrap/ --quiet
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_PIPELINE_SOURCE == "push"
 
 plan-dev:
   stage: plan-dev
@@ -97,6 +107,9 @@ plan-dev:
   script:
     - cd environments/dev
     - terraform init
+        -backend-config="bucket=${DEV_STATE_BUCKET}"
+        -backend-config="dynamodb_table=${STATE_LOCK_TABLE}"
+        -backend-config="region=${AWS_DEFAULT_REGION}"
     - terraform plan -out=tfplan
   artifacts:
     paths:
@@ -112,19 +125,21 @@ plan-dev:
       changes:
         - environments/dev/**/*
         - modules/**/*
-   
+
 apply-dev:
   stage: apply-dev
   <<: *base
   script:
     - cd environments/dev
     - terraform init
+        -backend-config="bucket=${DEV_STATE_BUCKET}"
+        -backend-config="dynamodb_table=${STATE_LOCK_TABLE}"
+        -backend-config="region=${AWS_DEFAULT_REGION}"
     - terraform apply tfplan
-
   needs: ["plan-dev"]
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
-      changes: 
+      changes:
         - environments/dev/**/*
         - modules/**/*
         - .gitlab-ci.yml
@@ -168,10 +183,13 @@ notify-dev:
 plan-staging:
   stage: plan-staging
   <<: *base
-  needs: ["notify-dev"] 
+  needs: ["notify-dev"]
   script:
     - cd environments/staging
     - terraform init
+        -backend-config="bucket=${STAGING_STATE_BUCKET}"
+        -backend-config="dynamodb_table=${STATE_LOCK_TABLE}"
+        -backend-config="region=${AWS_DEFAULT_REGION}"
     - terraform plan -out=tfplan
   artifacts:
     paths:
@@ -191,17 +209,19 @@ apply-staging:
   script:
     - cd environments/staging
     - terraform init
+        -backend-config="bucket=${STAGING_STATE_BUCKET}"
+        -backend-config="dynamodb_table=${STATE_LOCK_TABLE}"
+        -backend-config="region=${AWS_DEFAULT_REGION}"
     - terraform apply tfplan
-
   needs: ["plan-staging"]
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
-      changes: 
+      changes:
         - environments/staging/**/*
         - modules/**/*
         - .gitlab-ci.yml
       when: manual
-    
+
 notify-final:
   stage: notify-final
   image: curlimages/curl:latest

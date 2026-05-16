@@ -5,9 +5,9 @@ plugin "aws" {
 }
 
 rule "terraform_required_version" {
-  enabled = false
+  enabled = true
 }
 
 rule "terraform_required_providers" {
-  enabled = false
+  enabled = true
 }

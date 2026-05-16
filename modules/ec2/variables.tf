@@ -23,3 +23,9 @@ variable "project_name" {
   description = "Project name used for tagging"
   type        = string
 }
+
+variable "ec2_key_secret_name" {
+  description = "Secrets Manager secret name containing the EC2 public key"
+  type        = string
+  default     = "terraform-lab/ec2-public-key"
+}
