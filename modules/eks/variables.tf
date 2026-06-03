@@ -42,3 +42,8 @@ variable "max_size" {
   type        = number
   default     = 6
 }
+
+variable "vpc_id" {
+  description = "VPC ID for the EKS cluster — used for security group creation"
+  type        = string
+}

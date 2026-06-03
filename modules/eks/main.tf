@@ -1,11 +1,12 @@
 # EKS Cluster
 resource "aws_eks_cluster" "main" {
-  name            = "${var.project_name}-eks"
-  role_arn        = aws_iam_role.eks_cluster_role.arn
-  version         = var.kubernetes_version
+  name     = "${var.project_name}-eks"
+  role_arn = aws_iam_role.eks_cluster_role.arn
+  version  = var.kubernetes_version
 
   vpc_config {
     subnet_ids              = var.private_subnet_ids
+    security_group_ids      = [] # empty for now, will add later
     endpoint_private_access = true
     endpoint_public_access  = true
     public_access_cidrs     = ["0.0.0.0/0"]
@@ -17,6 +18,7 @@ resource "aws_eks_cluster" "main" {
     Name        = "${var.project_name}-eks"
     Environment = var.environment
     ManagedBy   = "terraform"
+    VPC         = var.vpc_id # documents which VPC this cluster is in
   }
 
   depends_on = [

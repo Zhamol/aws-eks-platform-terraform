@@ -66,7 +66,7 @@ resource "aws_instance" "lab" {
   subnet_id              = var.subnet_id
   vpc_security_group_ids = [var.security_group_id]
   key_name               = aws_key_pair.lab.key_name
-  monitoring             = true                               # CKV_AWS_126
+  monitoring             = true                              # CKV_AWS_126
   iam_instance_profile   = aws_iam_instance_profile.ec2.name # CKV2_AWS_41
 
   # CKV_AWS_79: enforce IMDSv2
