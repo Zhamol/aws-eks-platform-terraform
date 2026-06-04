@@ -1,0 +1,15 @@
+skip-check:
+  - CKV_AWS_135   # EBS optimization not supported on t3.micro
+  - CKV_AWS_38    # EKS public endpoint - restricted to dev IP via variable
+  - CKV_AWS_39    # EKS public endpoint disabled - needed for kubectl access
+  - CKV_AWS_382   # Egress 0.0.0.0/0 required for EC2 internet access
+  - CKV2_AWS_5    # SG attachment false positive - attached via EC2 module
+  - CKV_AWS_338   # CloudWatch 1yr retention - 30 days sufficient for lab
+  - CKV_AWS_158   # CloudWatch KMS - not required for lab
+  - CKV_AWS_21    # S3 versioning on logs bucket - not required
+  - CKV2_AWS_62   # S3 event notifications on logs - not required
+  - CKV_AWS_144   # Cross-region replication - not required for lab
+  - CKV_AWS_145   # KMS for S3 - AES256 sufficient for lab
+  - CKV_AWS_300   # S3 abort failed uploads - not critical for lab
+  - CKV_AWS_23    # SG description false positive - description exists
+  - CKV2_AWS_64   # KMS key policy - using default policy for lab

@@ -11,11 +11,6 @@ terraform {
 data "aws_caller_identity" "current" {}
 
 # CKV_AWS_18: dedicated access logging bucket
-#checkov:skip=CKV_AWS_18:This is the access log destination — logging to itself is not required
-#checkov:skip=CKV2_AWS_62:Logging bucket does not require event notifications
-#checkov:skip=CKV_AWS_21:Versioning not required for access logs bucket
-#checkov:skip=CKV_AWS_144:Cross-region replication not required for lab
-#checkov:skip=CKV_AWS_145:KMS encryption not required for lab, AES256 sufficient
 resource "aws_s3_bucket" "logs" {
   bucket = "${var.project_name}-${var.environment}-${data.aws_caller_identity.current.account_id}-logs"
 
@@ -46,7 +41,6 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "logs" {
 }
 
 # CKV2_AWS_61: lifecycle for the logging bucket
-#checkov:skip=CKV_AWS_300:Abort incomplete uploads not required for logs bucket
 resource "aws_s3_bucket_lifecycle_configuration" "logs" {
   bucket = aws_s3_bucket.logs.id
 
@@ -60,8 +54,6 @@ resource "aws_s3_bucket_lifecycle_configuration" "logs" {
   }
 }
 
-#checkov:skip=CKV_AWS_144:Cross-region replication not required for lab
-#checkov:skip=CKV_AWS_145:KMS encryption not required for lab, AES256 sufficient
 resource "aws_s3_bucket" "lab" {
   bucket = "${var.project_name}-${var.environment}-${data.aws_caller_identity.current.account_id}"
 
@@ -107,7 +99,6 @@ resource "aws_s3_bucket_logging" "lab" {
 }
 
 # CKV2_AWS_61: lifecycle policy for main bucket
-#checkov:skip=CKV_AWS_300:Abort incomplete uploads not critical for lab
 resource "aws_s3_bucket_lifecycle_configuration" "lab" {
   bucket = aws_s3_bucket.lab.id
 

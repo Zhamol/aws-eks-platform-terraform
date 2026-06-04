@@ -25,7 +25,6 @@ resource "aws_kms_key" "eks" {
 }
 
 # EKS Cluster
-#checkov:skip=CKV_AWS_39:Public endpoint needed for kubectl access from dev machine
 resource "aws_eks_cluster" "main" {
   name     = "${var.project_name}-eks"
   role_arn = aws_iam_role.eks_cluster_role.arn

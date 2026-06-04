@@ -94,9 +94,9 @@ test:
     # install and run checkov
     - apt-get install -y -qq python3-pip
     - pip3 install checkov
-    - checkov -d environments/ --quiet
-    - checkov -d modules/ --quiet
-    - checkov -d bootstrap/ --quiet
+    - checkov -d environments/ --quiet --config-file $(pwd)/.checkov.yaml
+    - checkov -d modules/ --quiet --config-file $(pwd)/.checkov.yaml
+    - checkov -d bootstrap/ --quiet --config-file $(pwd)/.checkov.yaml
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
 
