@@ -175,7 +175,9 @@ notify-dev:
             ]
           }]
         }"
-  needs: ["apply-dev"]
+  needs:
+    - job: "apply-dev"
+      optional: true
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       when: always
