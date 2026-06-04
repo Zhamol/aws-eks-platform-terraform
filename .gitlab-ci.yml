@@ -79,7 +79,9 @@ test:
   <<: *base
   script:
     # install tflint
-    - curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+    - curl -fsSL "https://github.com/terraform-linters/tflint/releases/download/v0.55.0/tflint_linux_amd64.zip" -o tflint.zip
+    - unzip -q tflint.zip && mv tflint /usr/local/bin/
+    - tflint --version
     - tflint --init --config $(pwd)/.tflint.hcl
 
     # run tflint on terraform directories
