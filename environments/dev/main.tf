@@ -46,10 +46,10 @@ module "s3" {
 }
 
 module "eks" {
-  source             = "../../modules/eks"
-  project_name       = var.project_name
-  environment        = var.environment
-  private_subnet_ids = module.vpc.private_subnet_ids
-  vpc_id             = module.vpc.vpc_id
-  public_access_cidrs  = var.eks_public_access_cidrs
+  source              = "../../modules/eks"
+  project_name        = var.project_name
+  environment         = var.environment
+  private_subnet_ids  = module.vpc.private_subnet_ids
+  vpc_id              = module.vpc.vpc_id
+  public_access_cidrs = var.eks_public_access_cidrs
 }
