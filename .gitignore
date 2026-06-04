@@ -5,6 +5,8 @@
 *.tfstate.lock.info
 .terraform.lock.hcl
 crash.log
+*.tfvars
+
 
 # AWS credentials
 *.pem

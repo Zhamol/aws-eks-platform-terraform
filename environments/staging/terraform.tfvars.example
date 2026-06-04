@@ -1,0 +1,4 @@
+# Copy to terraform.tfvars and fill in real values
+# Never commit terraform.tfvars — it is gitignored
+
+account_id = "YOUR_AWS_ACCOUNT_ID_HERE"

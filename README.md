@@ -13,10 +13,11 @@ AWS Organization
 ├── Dev        (446598504905) — development resources
 └── Staging    (916292310732) — staging resources
 Each environment has:
-├── VPC + subnets + internet gateway
+├── VPC + subnets + internet gateway (multi-AZ)
 ├── Security groups
 ├── EC2 instance (t3.micro)
-└── S3 bucket (versioned + encrypted)
+├── S3 bucket (versioned + encrypted)
+└── EKS cluster + managed node group + OIDC (IRSA)
 
 ## Project Structure
 terraform-lab/
@@ -27,14 +28,15 @@ terraform-lab/
 ├── modules/
 │   ├── vpc/               # VPC, subnets, IGW, routes, SG
 │   ├── ec2/               # EC2 instance, key pair
-│   └── s3/                # S3 bucket, versioning, encryption
+│   ├── s3/                # S3 bucket, versioning, encryption
+│   └── eks/               # EKS cluster, node group, OIDC provider
 ├── Makefile               # All project commands
 └── .gitlab-ci.yml         # CI/CD pipeline
 
 ## Prerequisites
 
 ### 1. Tools required
-- Terraform >= 1.5.7
+- Terraform >= 1.7
 - AWS CLI >= 2.15.0
 - Git
 - make
@@ -49,6 +51,21 @@ terraform-lab/
 aws sts get-caller-identity                    # management
 aws sts get-caller-identity --profile dev      # dev
 aws sts get-caller-identity --profile staging  # staging
+```
+
+## Getting Started
+
+1. Copy tfvars example:
+```bash
+cp environments/dev/terraform.tfvars.example environments/dev/terraform.tfvars
+```
+
+2. Fill in your AWS account ID in terraform.tfvars
+
+3. Run:
+```bash
+terraform init
+terraform plan
 ```
 
 ## Setup (run once in order)
@@ -92,20 +109,6 @@ aws secretsmanager create-secret \
   --region us-east-1 \
   --profile staging
 ```
-
-**2 — Fix the markdown code block** — first line says `markdown#` instead of `#`. Remove `markdown` from the very first line.
-
----
-
-Fix those two things, save, then commit everything:
-
-```bash
-git add .
-git commit -m "Add bootstrap secrets policies + update README"
-git push
-```
-
-Paste the pipeline output from GitLab.
 
 ## Bootstrap Files
 | File | Purpose |
@@ -221,19 +224,25 @@ make destroy-oidc
 | Resource | Cost |
 |----------|------|
 | EC2 t3.micro | ~$0.01/hr |
+| EKS control plane | ~$0.10/hr |
+| EKS nodes (t3.medium x2) | ~$0.08/hr |
+| NAT Gateway | ~$0.045/hr |
 | S3 state buckets | ~$0.00/hr (empty) |
 | DynamoDB | ~$0.00/hr (on-demand, empty) |
-| **Total** | **~$0.03/hr per environment** |
+| **Total** | **~$0.24/hr per environment** |
 
 Always run `make destroy-dev` when done to stop charges.
 
 ## Modules
 
 ### VPC Module
-Creates: VPC, public subnet, internet gateway, route table, security group (SSH only)
+Creates: VPC, multi-AZ public/private subnets (2 per AZ), internet gateway, NAT Gateway, route tables, VPC flow logs, security group (SSH disabled by default — use SSM)
 
 ### EC2 Module  
 Creates: EC2 instance (Amazon Linux 2023), key pair from Secrets Manager
 
 ### S3 Module
 Creates: S3 bucket with versioning, encryption (AES256), public access blocked
+
+### EKS Module
+Creates: EKS cluster (Kubernetes 1.32), managed node group (t3.medium, 2–6 nodes), OIDC provider for IRSA

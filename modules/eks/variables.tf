@@ -11,7 +11,7 @@ variable "environment" {
 variable "kubernetes_version" {
   description = "Kubernetes version"
   type        = string
-  default     = "1.28"
+  default     = "1.32"
 }
 
 variable "private_subnet_ids" {

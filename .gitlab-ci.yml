@@ -4,7 +4,7 @@ variables:
   # Set AWS_ROLE_ARN in GitLab CI project settings to avoid hardcoding account IDs
   AWS_ROLE_ARN: "arn:aws:iam::940920597829:role/gitlab-ci-terraform"
   AWS_DEFAULT_REGION: "us-east-1"
-  TERRAFORM_VERSION: "1.5.7"
+  TERRAFORM_VERSION: "1.9.0"
   AWS_CLI_VERSION: "2.15.0"
   DEV_ACCOUNT_ID: "446598504905"
   STAGING_ACCOUNT_ID: "916292310732"
@@ -18,9 +18,9 @@ stages:
   - plan-dev
   - apply-dev
   - notify-dev
-  - plan-staging
-  - apply-staging
-  - notify-final
+  # - plan-staging
+  # - apply-staging
+  # - notify-final
 
 
 # Combined template — OIDC + install
@@ -67,10 +67,10 @@ validate:
     - terraform init -backend=false
     - terraform validate
 
-    # check syntax for staging
-    - cd ${CI_PROJECT_DIR}/environments/staging
-    - terraform init -backend=false
-    - terraform validate
+    # STAGING DISABLED  — ENABLE when ready to DEPLOY STAGING
+    # - cd ${CI_PROJECT_DIR}/environments/staging
+    # - terraform init -backend=false
+    # - terraform validate
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
 
@@ -88,6 +88,7 @@ test:
     - tflint --chdir=modules/vpc --config $(pwd)/.tflint.hcl
     - tflint --chdir=modules/ec2 --config $(pwd)/.tflint.hcl
     - tflint --chdir=modules/s3 --config $(pwd)/.tflint.hcl
+    - tflint --chdir=modules/eks --config $(pwd)/.tflint.hcl  # ← added eks module
     - tflint --chdir=bootstrap --config $(pwd)/.tflint.hcl
 
     # install and run checkov
@@ -103,6 +104,7 @@ plan-dev:
   stage: plan-dev
   <<: *base
   script:
+    - export TF_VAR_account_id=$DEV_ACCOUNT_ID
     - cd environments/dev
     - terraform init
         -backend-config="bucket=${DEV_STATE_BUCKET}"
@@ -128,6 +130,7 @@ apply-dev:
   stage: apply-dev
   <<: *base
   script:
+    - export TF_VAR_account_id=$DEV_ACCOUNT_ID
     - cd environments/dev
     - terraform init
         -backend-config="bucket=${DEV_STATE_BUCKET}"
@@ -178,105 +181,110 @@ notify-dev:
       when: always
 
 
-plan-staging:
-  stage: plan-staging
-  <<: *base
-  needs: ["notify-dev"]
-  script:
-    - cd environments/staging
-    - terraform init
-        -backend-config="bucket=${STAGING_STATE_BUCKET}"
-        -backend-config="dynamodb_table=${STATE_LOCK_TABLE}"
-        -backend-config="region=${AWS_DEFAULT_REGION}"
-    - terraform plan -out=tfplan
-  artifacts:
-    paths:
-      - environments/staging/tfplan
-    expire_in: 1 hour
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-      changes:
-        - environments/staging/**/*
-        - modules/**/*
-        - .gitlab-ci.yml
+
+# STAGING DISABLED  — ENABLE when ready to DEPLOY STAGING
+
+# plan-staging:
+#   stage: plan-staging
+#   <<: *base
+#   needs: ["notify-dev"]
+#   script:
+#     - export TF_VAR_account_id=$STAGING_ACCOUNT_ID
+#     - cd environments/staging
+#     - terraform init
+#         -backend-config="bucket=${STAGING_STATE_BUCKET}"
+#         -backend-config="dynamodb_table=${STATE_LOCK_TABLE}"
+#         -backend-config="region=${AWS_DEFAULT_REGION}"
+#     - terraform plan -out=tfplan
+#   artifacts:
+#     paths:
+#       - environments/staging/tfplan
+#     expire_in: 1 hour
+#   rules:
+#     - if: $CI_COMMIT_BRANCH == "main"
+#       changes:
+#         - environments/staging/**/*
+#         - modules/**/*
+#         - .gitlab-ci.yml
 
 
 
-approval-staging-ready:
-  stage: plan-staging
-  image: curlimages/curl:latest
-  before_script: []
-  script:
-    - |
-      curl -s -X POST $SLACK_WEBHOOK_URL \
-        -H 'Content-type: application/json' \
-        -d "{
-          \"text\": \"⏸️ STAGING DEPLOYMENT READY FOR APPROVAL\",
-          \"attachments\": [{
-            \"color\": \"warning\",
-            \"fields\": [
-              {\"title\": \"Action needed\", \"value\": \"Click 'Run' on apply-staging job\", \"short\": false},
-              {\"title\": \"Pipeline\", \"value\": \"${CI_PIPELINE_URL}\", \"short\": false}
-            ]
-          }]
-        }"
-  needs: ["plan-staging"]
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-      changes:
-        - environments/staging/**/*
-        - modules/**/*
-        - .gitlab-ci.yml       
+# approval-staging-ready:
+#   stage: plan-staging
+#   image: curlimages/curl:latest
+#   before_script: []
+#   script:
+#     - |
+#       curl -s -X POST $SLACK_WEBHOOK_URL \
+#         -H 'Content-type: application/json' \
+#         -d "{
+#           \"text\": \"⏸️ STAGING DEPLOYMENT READY FOR APPROVAL\",
+#           \"attachments\": [{
+#             \"color\": \"warning\",
+#             \"fields\": [
+#               {\"title\": \"Action needed\", \"value\": \"Click 'Run' on apply-staging job\", \"short\": false},
+#               {\"title\": \"Pipeline\", \"value\": \"${CI_PIPELINE_URL}\", \"short\": false}
+#             ]
+#           }]
+#         }"
+#   needs: ["plan-staging"]
+#   rules:
+#     - if: $CI_COMMIT_BRANCH == "main"
+#       changes:
+#         - environments/staging/**/*
+#         - modules/**/*
+#         - .gitlab-ci.yml       
 
 
-apply-staging:
-  stage: apply-staging
-  <<: *base
-  script:
-    - cd environments/staging
-    - terraform init
-        -backend-config="bucket=${STAGING_STATE_BUCKET}"
-        -backend-config="dynamodb_table=${STATE_LOCK_TABLE}"
-        -backend-config="region=${AWS_DEFAULT_REGION}"
-    - terraform apply tfplan
-  needs: ["approval-staging-ready"]
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-      changes:
-        - environments/staging/**/*
-        - modules/**/*
-        - .gitlab-ci.yml
-      when: manual
+# apply-staging:
+#   stage: apply-staging
+#   <<: *base
+#   script:
+#     - export TF_VAR_account_id=$STAGING_ACCOUNT_ID
+#     - cd environments/staging
+#     - terraform init
+#         -backend-config="bucket=${STAGING_STATE_BUCKET}"
+#         -backend-config="dynamodb_table=${STATE_LOCK_TABLE}"
+#         -backend-config="region=${AWS_DEFAULT_REGION}"
+#     - terraform apply tfplan
+#   needs: ["approval-staging-ready"]
+#   rules:
+#     - if: $CI_COMMIT_BRANCH == "main"
+#       changes:
+#         - environments/staging/**/*
+#         - modules/**/*
+#         - .gitlab-ci.yml
+#       when: manual
 
-notify-final:
-  stage: notify-final
-  image: curlimages/curl:latest
-  before_script: []
-  script:
-    - |
-      if [ "$CI_JOB_STATUS" == "failed" ]; then
-         STATUS="❌ Pipeline failed"
-         COLOR="danger"
-      else
-        STATUS="✅ Pipeline succeeded"
-        COLOR="good"
-      fi
-      curl -s -X POST $SLACK_WEBHOOK_URL \
-        -H 'Content-type: application/json' \
-        -d "{
-          \"text\": \"${STATUS}\",
-          \"attachments\": [{
-            \"color\": \"${COLOR}\",
-            \"fields\": [
-              {\"title\": \"Project\", \"value\": \"${CI_PROJECT_NAME}\", \"short\": true},
-              {\"title\": \"By\", \"value\": \"${GITLAB_USER_NAME}\", \"short\": true},
-              {\"title\": \"Commit\", \"value\": \"${CI_COMMIT_SHORT_SHA}\", \"short\": true},
-              {\"title\": \"Message\", \"value\": \"${CI_COMMIT_MESSAGE}\", \"short\": false},
-              {\"title\": \"Approve staging\", \"value\": \"${CI_PIPELINE_URL}\", \"short\": false}
-            ]
-          }]
-        }"
-  needs: ["approval-staging-ready"]
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-      when: always
+# notify-final:
+#   stage: notify-final
+#   image: curlimages/curl:latest
+#   before_script: []
+#   script:
+#     - |
+#       if [ "$CI_JOB_STATUS" == "failed" ]; then
+#          STATUS="❌ Pipeline failed"
+#          COLOR="danger"
+#       else
+#         STATUS="✅ Pipeline succeeded"
+#         COLOR="good"
+#       fi
+#       curl -s -X POST $SLACK_WEBHOOK_URL \
+#         -H 'Content-type: application/json' \
+#         -d "{
+#           \"text\": \"${STATUS}\",
+#           \"attachments\": [{
+#             \"color\": \"${COLOR}\",
+#             \"fields\": [
+#               {\"title\": \"Project\", \"value\": \"${CI_PROJECT_NAME}\", \"short\": true},
+#               {\"title\": \"By\", \"value\": \"${GITLAB_USER_NAME}\", \"short\": true},
+#               {\"title\": \"Commit\", \"value\": \"${CI_COMMIT_SHORT_SHA}\", \"short\": true},
+#               {\"title\": \"Message\", \"value\": \"${CI_COMMIT_MESSAGE}\", \"short\": false},
+#               {\"title\": \"Approve staging\", \"value\": \"${CI_PIPELINE_URL}\", \"short\": false}
+#             ]
+#           }]
+#         }"
+#   needs: ["approval-staging-ready"]
+#   rules:
+#     - if: $CI_COMMIT_BRANCH == "main"
+#       when: always
