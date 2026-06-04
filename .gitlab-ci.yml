@@ -40,9 +40,9 @@ stages:
 
      # step 3 — install Terraform with SHA256 checksum verification
      - curl -fsSL "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_SHA256SUMS" -o terraform_SHA256SUMS
-     - curl -fsSL "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip" -o terraform.zip
+     - curl -fsSL "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip" -o terraform_${TERRAFORM_VERSION}_linux_amd64.zip
      - sha256sum -c <(grep "terraform_${TERRAFORM_VERSION}_linux_amd64.zip" terraform_SHA256SUMS)
-     - unzip -q terraform.zip && mv terraform /usr/local/bin/
+     - unzip -q terraform_${TERRAFORM_VERSION}_linux_amd64.zip && mv terraform /usr/local/bin/
 
      # step 4 — authenticate with AWS via OIDC
      - >
