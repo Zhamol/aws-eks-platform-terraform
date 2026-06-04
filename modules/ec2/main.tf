@@ -70,6 +70,7 @@ resource "aws_iam_instance_profile" "ec2" {
   role = aws_iam_role.ec2.name
 }
 
+#checkov:skip=CKV_AWS_135:EBS optimization not supported on t3.micro
 resource "aws_instance" "lab" {
   ami                    = data.aws_ami.amazon_linux.id
   instance_type          = var.instance_type

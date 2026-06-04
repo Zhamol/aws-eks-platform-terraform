@@ -49,11 +49,16 @@ variable "project_name" {
 variable "account_id" {
   description = "AWS account ID for the dev environment"
   type        = string
-  default     = "446598504905"
 }
 
 variable "terraform_role_name" {
   description = "IAM role name to assume in this account for Terraform execution"
   type        = string
   default     = "OrganizationAccountAccessRole"
+}
+
+variable "eks_public_access_cidrs" {
+  description = "CIDRs allowed to access EKS public endpoint"
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
 }

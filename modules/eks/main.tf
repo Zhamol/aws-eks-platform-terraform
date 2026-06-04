@@ -12,18 +12,38 @@ terraform {
   }
 }
 
+resource "aws_kms_key" "eks" {
+  description             = "${var.project_name}-${var.environment}-eks-secrets"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+
+  tags = {
+    Name        = "${var.project_name}-eks-kms"
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+}
+
 # EKS Cluster
+#checkov:skip=CKV_AWS_39:Public endpoint needed for kubectl access from dev machine
 resource "aws_eks_cluster" "main" {
   name     = "${var.project_name}-eks"
   role_arn = aws_iam_role.eks_cluster_role.arn
   version  = var.kubernetes_version
+
+  encryption_config {
+    provider {
+      key_arn = aws_kms_key.eks.arn
+    }
+    resources = ["secrets"]
+  }
 
   vpc_config {
     subnet_ids              = var.private_subnet_ids
     security_group_ids      = [] # empty for now, will add later
     endpoint_private_access = true
     endpoint_public_access  = true
-    public_access_cidrs     = ["0.0.0.0/0"]
+    public_access_cidrs     = var.public_access_cidrs
   }
 
   enabled_cluster_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]

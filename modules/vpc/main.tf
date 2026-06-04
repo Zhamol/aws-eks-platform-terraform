@@ -20,6 +20,19 @@ resource "aws_vpc" "main" {
   }
 }
 
+resource "aws_default_security_group" "default" {
+  vpc_id = aws_vpc.main.id
+
+  # no ingress or egress rules = restricts all traffic
+  # CKV2_AWS_12: restrict default security group
+
+  tags = {
+    Name        = "${var.project_name}-default-sg-restricted"
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+}
+
 resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
 
@@ -124,6 +137,8 @@ resource "aws_route_table_association" "private" {
 }
 
 # CKV_AWS_24: restrict SSH to a specific CIDR via variable (default disables SSH — use SSM Session Manager)
+#checkov:skip=CKV_AWS_382:Egress to internet required for EC2 instances
+#checkov:skip=CKV2_AWS_5:Security group is attached to EC2 via module
 resource "aws_security_group" "ec2" {
   name        = "${var.project_name}-ec2-sg"
   description = "Security group for EC2 instances — SSH restricted by ssh_allowed_cidr variable"
@@ -155,6 +170,7 @@ resource "aws_security_group" "ec2" {
 
 # CKV2_AWS_12: VPC flow logs
 #checkov:skip=CKV_AWS_158:KMS encryption for CloudWatch Logs not required for this lab
+#checkov:skip=CKV_AWS_338:30 day retention sufficient for lab environment
 resource "aws_cloudwatch_log_group" "vpc_flow_log" {
   name              = "/aws/vpc/flow-log/${var.project_name}-${var.environment}"
   retention_in_days = 30
