@@ -47,3 +47,9 @@ variable "vpc_id" {
   description = "VPC ID for the EKS cluster — used for security group creation"
   type        = string
 }
+
+variable "public_access_cidrs" {
+  description = "CIDRs allowed to access EKS public endpoint"
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+}
