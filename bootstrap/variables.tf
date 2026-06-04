@@ -16,12 +16,6 @@ variable "staging_account_id" {
   default     = "916292310732"
 }
 
-variable "aws_region" {
-  description = "AWS region used for resource ARNs"
-  type        = string
-  default     = "us-east-1"
-}
-
 variable "oidc_thumbprint" {
   description = "GitLab OIDC TLS thumbprint — update if GitLab rotates their certificate"
   type        = string
