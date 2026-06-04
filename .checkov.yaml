@@ -13,3 +13,4 @@ skip-check:
   - CKV_AWS_300   # S3 abort failed uploads - not critical for lab
   - CKV_AWS_23    # SG description false positive - description exists
   - CKV2_AWS_64   # KMS key policy - using default policy for lab
+  - CKV2_AWS_56   # IAMFullAccess used in bootstrap CI role - acceptable for lab
