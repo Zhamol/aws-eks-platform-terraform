@@ -139,7 +139,7 @@ resource "aws_route_table_association" "private" {
 # CKV_AWS_24: restrict SSH to a specific CIDR via variable (default disables SSH — use SSM Session Manager)
 resource "aws_security_group" "ec2" {
   name        = "${var.project_name}-ec2-sg"
-  description = "Security group for EC2 instances — SSH restricted by ssh_allowed_cidr variable"
+  description = "Security group for EC2 instances - SSH restricted by ssh_allowed_cidr variable"
   vpc_id      = aws_vpc.main.id
 
   dynamic "ingress" {
