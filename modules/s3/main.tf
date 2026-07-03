@@ -48,6 +48,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "logs" {
     id     = "expire-old-logs"
     status = "Enabled"
 
+    filter {}
+
     expiration {
       days = 90
     }
@@ -105,6 +107,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "lab" {
   rule {
     id     = "transition-noncurrent-versions"
     status = "Enabled"
+
+    filter {}
 
     noncurrent_version_transition {
       noncurrent_days = 30
