@@ -47,6 +47,11 @@ variable "vpc_id" {
   type        = string
 }
 
+variable "vpc_cidr" {
+  description = "VPC CIDR block — used to scope the control plane security group's ingress"
+  type        = string
+}
+
 variable "public_access_cidrs" {
   description = "CIDRs allowed to access EKS public endpoint"
   type        = list(string)

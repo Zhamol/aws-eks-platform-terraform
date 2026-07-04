@@ -51,6 +51,7 @@ module "eks" {
   environment         = var.environment
   private_subnet_ids  = module.vpc.private_subnet_ids
   vpc_id              = module.vpc.vpc_id
+  vpc_cidr            = module.vpc.vpc_cidr
   public_access_cidrs = var.public_access_cidrs
   kubernetes_version  = var.kubernetes_version
 }
