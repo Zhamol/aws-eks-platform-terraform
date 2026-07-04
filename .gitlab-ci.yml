@@ -11,6 +11,9 @@ variables:
   DEV_STATE_BUCKET: "terraform-state-${DEV_ACCOUNT_ID}"
   STAGING_STATE_BUCKET: "terraform-state-${STAGING_ACCOUNT_ID}"
   STATE_LOCK_TABLE: "terraform-state-lock"
+  DEV_EKS_PUBLIC_ACCESS_CIDRS: '["96.237.136.160/32"]'
+  DEV_KUBERNETES_VERSION: "1.33"
+  # STAGING_EKS_PUBLIC_ACCESS_CIDRS / STAGING_KUBERNETES_VERSION: set before re-enabling staging jobs below
 
 # Dedupe pipelines: an MR gets exactly one pipeline (merge_request_event),
 # a push to main gets exactly one pipeline (push) — no parallel branch +
@@ -118,6 +121,8 @@ plan-dev:
   <<: *base
   script:
     - export TF_VAR_account_id=$DEV_ACCOUNT_ID
+    - export TF_VAR_public_access_cidrs=$DEV_EKS_PUBLIC_ACCESS_CIDRS
+    - export TF_VAR_kubernetes_version=$DEV_KUBERNETES_VERSION
     - cd environments/dev
     - terraform init
         -backend-config="bucket=${DEV_STATE_BUCKET}"
@@ -144,6 +149,8 @@ apply-dev:
   <<: *base
   script:
     - export TF_VAR_account_id=$DEV_ACCOUNT_ID
+    - export TF_VAR_public_access_cidrs=$DEV_EKS_PUBLIC_ACCESS_CIDRS
+    - export TF_VAR_kubernetes_version=$DEV_KUBERNETES_VERSION
     - cd environments/dev
     - terraform init
         -backend-config="bucket=${DEV_STATE_BUCKET}"
@@ -205,6 +212,8 @@ notify-dev:
 #   needs: ["notify-dev"]
 #   script:
 #     - export TF_VAR_account_id=$STAGING_ACCOUNT_ID
+#     - export TF_VAR_public_access_cidrs=$STAGING_EKS_PUBLIC_ACCESS_CIDRS
+#     - export TF_VAR_kubernetes_version=$STAGING_KUBERNETES_VERSION
 #     - cd environments/staging
 #     - terraform init
 #         -backend-config="bucket=${STAGING_STATE_BUCKET}"
@@ -256,6 +265,8 @@ notify-dev:
 #   <<: *base
 #   script:
 #     - export TF_VAR_account_id=$STAGING_ACCOUNT_ID
+#     - export TF_VAR_public_access_cidrs=$STAGING_EKS_PUBLIC_ACCESS_CIDRS
+#     - export TF_VAR_kubernetes_version=$STAGING_KUBERNETES_VERSION
 #     - cd environments/staging
 #     - terraform init
 #         -backend-config="bucket=${STAGING_STATE_BUCKET}"
