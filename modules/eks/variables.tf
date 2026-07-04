@@ -11,7 +11,6 @@ variable "environment" {
 variable "kubernetes_version" {
   description = "Kubernetes version"
   type        = string
-  default     = "1.32"
 }
 
 variable "private_subnet_ids" {
@@ -51,5 +50,4 @@ variable "vpc_id" {
 variable "public_access_cidrs" {
   description = "CIDRs allowed to access EKS public endpoint"
   type        = list(string)
-  default     = ["0.0.0.0/0"]
 }

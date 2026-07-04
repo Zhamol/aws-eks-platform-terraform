@@ -12,6 +12,18 @@ terraform {
   }
 }
 
+resource "aws_security_group" "cluster" {
+  name        = "${var.project_name}-eks-cluster"
+  description = "Control plane security group for the EKS cluster - no rules, restrict via public_access_cidrs"
+  vpc_id      = var.vpc_id
+
+  tags = {
+    Name        = "${var.project_name}-eks-cluster"
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+}
+
 resource "aws_kms_key" "eks" {
   description             = "${var.project_name}-${var.environment}-eks-secrets"
   deletion_window_in_days = 7
@@ -39,7 +51,7 @@ resource "aws_eks_cluster" "main" {
 
   vpc_config {
     subnet_ids              = var.private_subnet_ids
-    security_group_ids      = [] # empty for now, will add later
+    security_group_ids      = [aws_security_group.cluster.id]
     endpoint_private_access = true
     endpoint_public_access  = true
     public_access_cidrs     = var.public_access_cidrs

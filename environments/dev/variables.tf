@@ -57,8 +57,12 @@ variable "terraform_role_name" {
   default     = "OrganizationAccountAccessRole"
 }
 
-variable "eks_public_access_cidrs" {
+variable "public_access_cidrs" {
   description = "CIDRs allowed to access EKS public endpoint"
   type        = list(string)
-  default     = ["0.0.0.0/0"]
+}
+
+variable "kubernetes_version" {
+  description = "Kubernetes version for the EKS cluster"
+  type        = string
 }
