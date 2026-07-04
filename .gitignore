@@ -1,14 +1,21 @@
-# Terraform
+# Terraform working files
 .terraform/
 *.tfstate
+*.tfstate.*
 *.tfstate.backup
 *.tfstate.lock.info
-.terraform.lock.hcl
+*.tfplan
 crash.log
+crash.*.log
+
+# Environment-specific variable values
 *.tfvars
+!*.tfvars.example
 
+# Terraform dependency lock file should be committed
+!.terraform.lock.hcl
 
-# AWS credentials
+# AWS credentials and private keys
 *.pem
 .aws/
 

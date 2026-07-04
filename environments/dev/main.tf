@@ -13,11 +13,12 @@ terraform {
 }
 
 provider "aws" {
-  region = var.aws_region
+  region  = var.aws_region
+  profile = "dev"
 
-  assume_role {
-    role_arn = "arn:aws:iam::${var.account_id}:role/${var.terraform_role_name}"
-  }
+  allowed_account_ids = [
+    var.account_id
+  ]
 }
 
 module "vpc" {
