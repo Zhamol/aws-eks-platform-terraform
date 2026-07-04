@@ -12,6 +12,15 @@ variables:
   STAGING_STATE_BUCKET: "terraform-state-${STAGING_ACCOUNT_ID}"
   STATE_LOCK_TABLE: "terraform-state-lock"
 
+# Dedupe pipelines: an MR gets exactly one pipeline (merge_request_event),
+# a push to main gets exactly one pipeline (push) — no parallel branch +
+# MR pipeline racing against the same dev state/lock.
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "web"
+
 stages:
   - validate
   - test
@@ -73,6 +82,7 @@ validate:
     # - terraform validate
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
 test:
   stage: test
@@ -101,6 +111,7 @@ test:
     - checkov -d bootstrap/ --quiet --config-file $(pwd)/.checkov.yaml
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
 plan-dev:
   stage: plan-dev
