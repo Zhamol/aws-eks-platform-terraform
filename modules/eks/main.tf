@@ -34,9 +34,10 @@ resource "aws_security_group" "cluster" {
   }
 
   tags = {
-    Name        = "${var.project_name}-eks-cluster"
-    Environment = var.environment
-    ManagedBy   = "terraform"
+    Name                     = "${var.project_name}-eks-cluster"
+    Environment              = var.environment
+    ManagedBy                = "terraform"
+    "karpenter.sh/discovery" = "${var.project_name}-eks"
   }
 }
 
@@ -57,6 +58,11 @@ resource "aws_eks_cluster" "main" {
   name     = "${var.project_name}-eks"
   role_arn = aws_iam_role.eks_cluster_role.arn
   version  = var.kubernetes_version
+
+  access_config {
+    authentication_mode                         = "API_AND_CONFIG_MAP"
+    bootstrap_cluster_creator_admin_permissions = true
+  }
 
   encryption_config {
     provider {

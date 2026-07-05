@@ -96,3 +96,27 @@ module "load_balancer_controller" {
   environment       = var.environment
   project_name      = var.project_name
 }
+
+module "karpenter" {
+  source = "../../modules/karpenter"
+
+  cluster_name      = module.eks.cluster_name
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_issuer_url   = module.eks.oidc_issuer_url
+  environment       = var.environment
+  project_name      = var.project_name
+  karpenter_version = var.karpenter_version
+}
+
+resource "aws_eks_access_entry" "karpenter_nodes" {
+  cluster_name  = module.eks.cluster_name
+  principal_arn = module.karpenter.node_role_arn
+  type          = "EC2_LINUX"
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-karpenter-nodes"
+    Project     = var.project_name
+    Environment = var.environment
+    ManagedBy   = "Terraform"
+  }
+}

@@ -42,3 +42,18 @@ output "load_balancer_controller_policy_arn" {
   description = "IAM policy ARN for the AWS Load Balancer Controller"
   value       = module.load_balancer_controller.iam_policy_arn
 }
+
+output "karpenter_controller_role_arn" {
+  description = "IAM role ARN for the Karpenter controller"
+  value       = module.karpenter.controller_role_arn
+}
+
+output "karpenter_node_role_arn" {
+  description = "IAM role ARN for Karpenter nodes"
+  value       = module.karpenter.node_role_arn
+}
+
+output "karpenter_interruption_queue_name" {
+  description = "SQS interruption queue name for Karpenter"
+  value       = module.karpenter.interruption_queue_name
+}

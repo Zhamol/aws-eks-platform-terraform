@@ -67,9 +67,10 @@ resource "aws_subnet" "private" {
   map_public_ip_on_launch = false
 
   tags = {
-    Name        = "${var.project_name}-private-subnet-${count.index}" # unique name per subnet
-    Environment = var.environment
-    ManagedBy   = "terraform"
+    Name                     = "${var.project_name}-private-subnet-${count.index}" # unique name per subnet
+    Environment              = var.environment
+    ManagedBy                = "terraform"
+    "karpenter.sh/discovery" = "${var.project_name}-eks"
   }
 }
 
