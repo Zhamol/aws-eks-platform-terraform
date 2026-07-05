@@ -51,6 +51,19 @@ resource "aws_iam_openid_connect_provider" "gitlab" {
   thumbprint_list = [var.oidc_thumbprint]
 }
 
+# GitHub Actions OIDC Provider
+resource "aws_iam_openid_connect_provider" "github" {
+  url = "https://token.actions.githubusercontent.com"
+
+  client_id_list = [
+    "sts.amazonaws.com"
+  ]
+
+  thumbprint_list = [
+    "6938fd4d98bab03faadb97b34396831e3780aea1"
+  ]
+}
+
 # IAM Role for GitLab CI
 resource "aws_iam_role" "gitlab_ci" {
   name = "gitlab-ci-terraform"
@@ -70,6 +83,103 @@ resource "aws_iam_role" "gitlab_ci" {
       }
     }]
   })
+}
+
+# IAM Role for GitHub Actions — dev environment
+resource "aws_iam_role" "github_actions_dev" {
+  name = "github-actions-terraform-dev"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [{
+      Effect = "Allow"
+
+      Principal = {
+        Federated = aws_iam_openid_connect_provider.github.arn
+      }
+
+      Action = "sts:AssumeRoleWithWebIdentity"
+
+      Condition = {
+        StringEquals = {
+          "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+          "token.actions.githubusercontent.com:sub" = "repo:${var.github_repository}:environment:${var.github_dev_environment}"
+        }
+      }
+    }]
+  })
+}
+
+# Allow dev GitHub Actions to assume only the dev Terraform execution role
+resource "aws_iam_role_policy" "github_actions_dev_assume_role" {
+  name = "assume-dev-terraform-execution-role"
+  role = aws_iam_role.github_actions_dev.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [{
+      Effect = "Allow"
+      Action = "sts:AssumeRole"
+
+      Resource = [
+        "arn:aws:iam::${var.dev_account_id}:role/terraform-ci",
+      ]
+    }]
+  })
+}
+
+# IAM Role for GitHub Actions — staging environment
+resource "aws_iam_role" "github_actions_staging" {
+  name = "github-actions-terraform-staging"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [{
+      Effect = "Allow"
+
+      Principal = {
+        Federated = aws_iam_openid_connect_provider.github.arn
+      }
+
+      Action = "sts:AssumeRoleWithWebIdentity"
+
+      Condition = {
+        StringEquals = {
+          "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+          "token.actions.githubusercontent.com:sub" = "repo:${var.github_repository}:environment:${var.github_staging_environment}"
+        }
+      }
+    }]
+  })
+}
+
+# Allow staging GitHub Actions to assume only the staging Terraform execution role
+resource "aws_iam_role_policy" "github_actions_staging_assume_role" {
+  name = "assume-staging-terraform-execution-role"
+  role = aws_iam_role.github_actions_staging.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [{
+      Effect = "Allow"
+      Action = "sts:AssumeRole"
+
+      Resource = [
+        "arn:aws:iam::${var.staging_account_id}:role/terraform-ci",
+      ]
+    }]
+  })
+}
+
+# Preserve existing GitLab AdministratorAccess during GitHub Actions migration.
+# Remove only after GitHub Actions authentication and Terraform plan are verified.
+resource "aws_iam_role_policy_attachment" "gitlab_ci" {
+  role       = aws_iam_role.gitlab_ci.name
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
 
 # Scoped managed policies for GitLab CI — replaces AdministratorAccess (CKV_AWS_355)

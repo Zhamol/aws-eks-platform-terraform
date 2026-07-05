@@ -54,7 +54,7 @@ variable "account_id" {
 variable "terraform_role_name" {
   description = "IAM role name to assume in this account for Terraform execution"
   type        = string
-  default     = "OrganizationAccountAccessRole"
+  default     = "terraform-ci"
 }
 
 variable "public_access_cidrs" {

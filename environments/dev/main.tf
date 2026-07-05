@@ -13,8 +13,11 @@ terraform {
 }
 
 provider "aws" {
-  region  = var.aws_region
-  profile = "dev"
+  region = var.aws_region
+
+  assume_role {
+    role_arn = "arn:aws:iam::${var.account_id}:role/${var.terraform_role_name}"
+  }
 
   allowed_account_ids = [
     var.account_id
@@ -22,9 +25,8 @@ provider "aws" {
 }
 
 provider "aws" {
-  alias   = "management"
-  region  = var.aws_region
-  profile = "default"
+  alias  = "management"
+  region = var.aws_region
 
   allowed_account_ids = [
     "940920597829"

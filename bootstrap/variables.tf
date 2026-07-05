@@ -21,3 +21,21 @@ variable "oidc_thumbprint" {
   type        = string
   default     = "9e99a48a9960b14926bb7f3b02e22da2b0ab7280"
 }
+
+variable "github_repository" {
+  description = "GitHub repository allowed to assume the Terraform role"
+  type        = string
+  default     = "Zhamol/aws-eks-platform-terraform"
+}
+
+variable "github_dev_environment" {
+  description = "GitHub Environment allowed to assume the dev Terraform role"
+  type        = string
+  default     = "dev"
+}
+
+variable "github_staging_environment" {
+  description = "GitHub Environment allowed to assume the staging Terraform role"
+  type        = string
+  default     = "staging"
+}
