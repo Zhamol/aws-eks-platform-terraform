@@ -17,3 +17,13 @@ output "bucket_arn" {
   description = "S3 bucket ARN"
   value       = module.s3.bucket_arn
 }
+
+output "ecr_repository_urls" {
+  description = "ECR repository URLs"
+  value       = module.ecr.repository_urls
+}
+
+output "ecr_repository_arns" {
+  description = "ECR repository ARNs"
+  value       = module.ecr.repository_arns
+}

@@ -57,3 +57,12 @@ module "eks" {
   kubernetes_version  = var.kubernetes_version
 }
 # triggered
+
+module "ecr" {
+  source = "../../modules/ecr"
+
+  repository_names = var.ecr_repository_names
+  environment      = var.environment
+  project_name     = var.project_name
+  images_to_keep   = var.ecr_images_to_keep
+}

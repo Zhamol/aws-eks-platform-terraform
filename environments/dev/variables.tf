@@ -66,3 +66,14 @@ variable "kubernetes_version" {
   description = "Kubernetes version for the EKS cluster"
   type        = string
 }
+
+variable "ecr_repository_names" {
+  description = "ECR repositories created for application images"
+  type        = set(string)
+}
+
+variable "ecr_images_to_keep" {
+  description = "Number of images to retain in each ECR repository"
+  type        = number
+  default     = 20
+}
