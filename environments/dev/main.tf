@@ -21,6 +21,16 @@ provider "aws" {
   ]
 }
 
+provider "aws" {
+  alias   = "management"
+  region  = var.aws_region
+  profile = "default"
+
+  allowed_account_ids = [
+    "940920597829"
+  ]
+}
+
 module "vpc" {
   source               = "../../modules/vpc"
   environment          = var.environment
@@ -65,4 +75,14 @@ module "ecr" {
   environment      = var.environment
   project_name     = var.project_name
   images_to_keep   = var.ecr_images_to_keep
+}
+
+module "route53" {
+  source = "../../modules/route53"
+
+  providers = {
+    aws = aws.management
+  }
+
+  domain_name = var.domain_name
 }

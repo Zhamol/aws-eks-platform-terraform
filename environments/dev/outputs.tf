@@ -27,3 +27,8 @@ output "ecr_repository_arns" {
   description = "ECR repository ARNs"
   value       = module.ecr.repository_arns
 }
+
+output "route53_zone_id" {
+  description = "Route 53 hosted zone ID"
+  value       = module.route53.zone_id
+}
