@@ -228,6 +228,7 @@ data "aws_iam_policy_document" "terraform_dev_platform" {
       "kms:TagResource",
       "kms:UntagResource",
       "kms:UpdateKeyDescription",
+      "kms:CreateGrant",
     ]
 
     resources = [
@@ -252,6 +253,7 @@ data "aws_iam_policy_document" "terraform_dev_platform" {
     resources = [
       "arn:aws:iam::${var.dev_account_id}:role/terraform-lab-dev-ec2",
       "arn:aws:iam::${var.dev_account_id}:role/terraform-lab-dev-vpc-flow-log",
+      "arn:aws:iam::${var.dev_account_id}:role/terraform-lab-dev-karpenter-node",
       "arn:aws:iam::${var.dev_account_id}:role/terraform-lab-eks-cluster-role",
       "arn:aws:iam::${var.dev_account_id}:role/terraform-lab-eks-node-role",
     ]
