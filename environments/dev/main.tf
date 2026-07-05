@@ -86,3 +86,13 @@ module "route53" {
 
   domain_name = var.domain_name
 }
+
+module "load_balancer_controller" {
+  source = "../../modules/load-balancer-controller"
+
+  cluster_name      = module.eks.cluster_name
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_issuer_url   = module.eks.oidc_issuer_url
+  environment       = var.environment
+  project_name      = var.project_name
+}

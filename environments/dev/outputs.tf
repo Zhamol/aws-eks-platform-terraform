@@ -32,3 +32,13 @@ output "route53_zone_id" {
   description = "Route 53 hosted zone ID"
   value       = module.route53.zone_id
 }
+
+output "load_balancer_controller_role_arn" {
+  description = "IAM role ARN for the AWS Load Balancer Controller"
+  value       = module.load_balancer_controller.iam_role_arn
+}
+
+output "load_balancer_controller_policy_arn" {
+  description = "IAM policy ARN for the AWS Load Balancer Controller"
+  value       = module.load_balancer_controller.iam_policy_arn
+}

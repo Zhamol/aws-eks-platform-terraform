@@ -28,3 +28,8 @@ output "node_group_id" {
   description = "Node group ID"
   value       = aws_eks_node_group.main.id
 }
+
+output "oidc_issuer_url" {
+  description = "EKS cluster OIDC issuer URL"
+  value       = aws_eks_cluster.main.identity[0].oidc[0].issuer
+}
