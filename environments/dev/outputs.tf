@@ -57,3 +57,8 @@ output "karpenter_interruption_queue_name" {
   description = "SQS interruption queue name for Karpenter"
   value       = module.karpenter.interruption_queue_name
 }
+
+output "vpc_id" {
+  description = "VPC ID used by the EKS cluster"
+  value       = module.vpc.vpc_id
+}
